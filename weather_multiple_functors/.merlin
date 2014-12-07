@@ -1,0 +1,2 @@
+PKG lwt cohttp cohttp.lwt core re.str
+EXT lwt
