@@ -3,15 +3,29 @@ open Cohttp
 open Cohttp_lwt_unix
 
 
-
-
 module type WeatherProvider =
 sig 
   val temperature: string -> float Lwt.t 
 end 
 
 
+module OpenWeatherMap : WeatherProvider =
+struct
+  let name = "OpenWeatherMap"
 
+  let uri city =
+    "http://api.openweathermap.org/data/2.5/weather?q=" ^ city
+  
+  let temperature city = 
+  Client.get (Uri.of_string (uri city))
+  >>= fun (_, body) -> Cohttp_lwt_body.to_string body
+  >>= fun s -> 
+    let open Openweathermap_j in
+    let w = weather_of_string s in
+    let temp = w.main.temp in
+    Lwt_io.printf "%s: %.2f\n" w.name temp 
+  >>= fun _ -> return temp
+  end
 
 
 module WeatherUnderground : WeatherProvider =
@@ -38,26 +52,6 @@ struct
 end
 
 
-module OpenWeatherMap : WeatherProvider =
-struct
-  let name = "OpenWeatherMap"
-
-  let uri city =
-    "http://api.openweathermap.org/data/2.5/weather?q=" ^ city
-  
-  let temperature city = 
-  Client.get (Uri.of_string (uri city))
-  >>= fun (_, body) -> Cohttp_lwt_body.to_string body
-  >>= fun s -> 
-    let open Openweathermap_j in
-    let w = weather_of_string s in
-    let temp = w.main.temp in
-    Lwt_io.printf "%s: %.2f\n" w.name temp 
-  >>= fun _ -> return temp
-  end
-
-
-
 module MultipleWeather (M1 : WeatherProvider) 
                        (M2 : WeatherProvider) : WeatherProvider = 
 struct
@@ -71,5 +65,4 @@ struct
       
 end
 
-module MW = MultipleWeather (OpenWeatherMap) (WeatherUnderground) 
-
+module MW = MultipleWeather (OpenWeatherMap) (WeatherUnderground)
